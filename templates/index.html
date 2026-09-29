@@ -1,1 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecallOps — Incident Response Agent</title>
+    <!-- Tailwind CSS for rapid, clean, professional styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
 
+    <!-- Header Navigation -->
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">🚨</span>
+                <h1 class="text-xl font-bold tracking-tight text-white">Recall<span class="text-indigo-400">Ops</span> Agent</h1>
+            </div>
+            <span class="text-xs px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-full font-medium">
+                Powered by Hindsight & Groq
+            </span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Left Column: Input Form (New Incident & Resolution Retain) -->
+        <div class="space-y-6">
+            
+            <!-- Triage Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <span>⚡</span> Triage New Production Incident
+                </h2>
+                <form id="incidentForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Service Name</label>
+                        <input type="text" id="service" required placeholder="e.g., Payment API" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Symptoms</label>
+                        <textarea id="symptoms" rows="3" required placeholder="e.g., 500 errors increased to 38%, database connections saturated..."
+                            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-400 mb-1">Error Logs (Optional)</label>
+                        <input type="text" id="error_logs" placeholder="e.g., psycopg2.OperationalError: connection pool exhausted" 
+                            class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
+                    </div>
+                    <button type="submit" id="investigateBtn"
+                        class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 rounded-lg transition shadow-lg shadow-indigo-600/20">
+                        Investigate with Hindsight Memory
+                    </button>
+                </form>
+            </div>
+
+            <!-- Resolution / Retain Box (Learning Loop) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                <h2 class="text-lg font-semibold mb-2 flex items-center gap-2">
+                    <span>🧠</span> Teach Agent (Retain Post-Mortem)
+                </h2>
+                <p class="text-xs text-slate-400 mb-4">Once resolved, store the post-mortem so future similar incidents trigger this solution automatically.</p>
+                <form id="resolveForm" class="space-y-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <input type="text" id="res_id" required placeholder="Incident ID (e.g. INC-1049)" 
+                            class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <input type="text" id="res_service" required placeholder="Service Name" 
+                            class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <input type="text" id="res_root" required placeholder="Actual Root Cause identified" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="res_fix" required placeholder="Fix Applied & Commands used" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <button type="submit"
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium py-2.5 rounded-lg transition">
+                        Retain into Hindsight Memory
+                    </button>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Agent Output & Memory Analysis -->
+        <div class="space-y-6">
+            
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl min-h-[500px] flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <span>🔍</span> Agent Analysis & Historical Recall
+                    </h2>
+                    
+                    <div id="outputPlaceholder" class="text-center text-slate-500 py-24">
+                        <p class="text-3xl mb-2">🔭</p>
+                        <p>Submit an incident on the left to trigger memory recall and LLM reasoning.</p>
+                    </div>
+
+                    <div id="loadingIndicator" class="hidden text-center text-indigo-400 py-24">
+                        <svg class="animate-spin h-8 w-8 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <p class="text-sm font-medium animate-pulse">Recalling historical memory & analyzing symptoms...</p>
+                    </div>
+
+                    <div id="resultsContainer" class="hidden space-y-4">
+                        <!-- Recalled Memories Section -->
+                        <div>
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-indigo-400 mb-2">Recalled Hindsight Experiences</h3>
+                            <div id="historyList" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-slate-300 space-y-2 max-h-36 overflow-y-auto">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- LLM Recommendation Box -->
+                        <div>
+                            <h3 class="text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-2">Recommended Fix & Runbook</h3>
+                            <div id="llmRecommendation" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-200 whitespace-pre-line leading-relaxed max-h-80 overflow-y-auto">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-t border-slate-800 pt-4 mt-6 text-xs text-slate-500 text-center">
+                    Hackathon Submission Blueprint — Persistent AI Memory Agent
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- JavaScript Handlers -->
+    <!-- JavaScript Handlers -->
+    <script>
+        document.getElementById('incidentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const service = document.getElementById('service').value;
+            const symptoms = document.getElementById('symptoms').value;
+            const error_logs = document.getElementById('error_logs').value;
+
+            document.getElementById('outputPlaceholder').classList.add('hidden');
+            document.getElementById('resultsContainer').classList.add('hidden');
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+
+            try {
+                const response = await fetch('/api/investigate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ service, symptoms, error_logs })
+                });
+                
+                const result = await response.json();
+                document.getElementById('loadingIndicator').classList.add('hidden');
+
+                if (result.status === 'success') {
+                    document.getElementById('resultsContainer').classList.remove('hidden');
+                    
+                    // Populate Historical Memories
+                    const historyDiv = document.getElementById('historyList');
+                    historyDiv.innerHTML = '';
+                    if (result.data.historical_matches.length > 0) {
+                        result.data.historical_matches.forEach(match => {
+                            const p = document.createElement('div');
+                            p.className = 'border-b border-slate-900 pb-1 text-emerald-400';
+                            p.textContent = `• [Matched Memory]: ${match}`;
+                            historyDiv.appendChild(p);
+                        });
+                    } else {
+                        historyDiv.innerHTML = '<span class="text-slate-500">No matching past incidents found in memory layer.</span>';
+                    }
+
+                    // Populate LLM Recommendation
+                    document.getElementById('llmRecommendation').textContent = result.data.recommendation;
+                } else {
+                    showBanner('Error: ' + result.message, 'error');
+                }
+            } catch (err) {
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('outputPlaceholder').classList.remove('hidden');
+                showBanner('Failed to connect to backend server.', 'error');
+            }
+        });
+
+        document.getElementById('resolveForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const payload = {
+                incident_id: document.getElementById('res_id').value,
+                service: document.getElementById('res_service').value,
+                root_cause: document.getElementById('res_root').value,
+                fix_applied: document.getElementById('res_fix').value,
+                lesson: "Resolved via operational feedback loop."
+            };
+
+            try {
+                const response = await fetch('/api/resolve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showBanner('🧠 Success! Incident knowledge successfully retained in Hindsight memory layer.', 'success');
+                    document.getElementById('resolveForm').reset();
+                } else {
+                    showBanner('Error: ' + result.message, 'error');
+                }
+            } catch (err) {
+                showBanner('Failed to save resolution to memory.', 'error');
+            }
+        });
+
+        // Inline Banner Notification Helper (replaces browser alerts)
+        function showBanner(message, type) {
+            let existingBanner = document.getElementById('inlineBanner');
+            if (existingBanner) existingBanner.remove();
+
+            const banner = document.createElement('div');
+            banner.id = 'inlineBanner';
+            banner.className = `p-4 mb-4 rounded-lg text-sm font-medium border transition-all ${
+                type === 'success' 
+                    ? 'bg-emerald-950/50 border-emerald-500/30 text-emerald-300' 
+                    : 'bg-rose-950/50 border-rose-500/30 text-rose-300'
+            }`;
+            banner.textContent = message;
+
+            // Prepend banner above the triage box
+            const triageBox = document.querySelector('.space-y-6');
+            triageBox.prepend(banner);
+
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                if (banner) banner.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
